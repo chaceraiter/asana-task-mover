@@ -1,1 +1,8 @@
- 
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Move Asana Tasks
+Comment=Move incomplete Asana tasks to tomorrow
+Exec=bash -c 'cd "$(dirname "$0")" && source .env && python3 asana_task_mover.py'
+Terminal=true
+Categories=Utility; 
