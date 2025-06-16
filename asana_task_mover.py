@@ -49,14 +49,15 @@ def get_incomplete_tasks():
             'opt_fields': 'name,due_on,due_at'
         }
     
-    # Debug print to show the query parameters
-    print("Debug: Query parameters being sent to Asana:", query_params)
-    
     # Get tasks based on the environment
     tasks = client.tasks.find_all(query_params)
     
     tasks_to_move = []
     today = datetime.now().date()
+    
+    # Calculate tomorrow's midnight in local time, then convert to UTC
+    tomorrow_midnight_local = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    tomorrow_midnight_utc = tomorrow_midnight_local.astimezone(timezone.utc)
     
     for task in tasks:
         print("\n" + "="*50)
@@ -85,12 +86,19 @@ def get_incomplete_tasks():
         print(f"    Task date: {task_date}")
         print(f"    Today's date: {today}")
         
-        # Check if the task is due today or tomorrow but before local midnight
-        if task_date <= today or (task_date == today + timedelta(days=1) and has_time and due_at.time() < datetime.now().time()):
-            print("  -> Will be moved (due today or tomorrow before local midnight)")
-            tasks_to_move.append(task)
+        # Check if task is due before tomorrow's midnight (UTC)
+        if has_time:
+            if due_at <= tomorrow_midnight_utc:
+                print("  -> Will be moved (due before tomorrow's midnight UTC)")
+                tasks_to_move.append(task)
+            else:
+                print("  -> Will be skipped (due after tomorrow's midnight UTC)")
         else:
-            print("  -> Will be skipped (due after tomorrow or after local midnight)")
+            if task_date <= today:
+                print("  -> Will be moved (due today or earlier)")
+                tasks_to_move.append(task)
+            else:
+                print("  -> Will be skipped (due after today)")
     
     print(f"\nFound {len(tasks_to_move)} incomplete tasks. Moving them to tomorrow...")
     return tasks_to_move
